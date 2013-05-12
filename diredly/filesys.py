@@ -192,7 +192,8 @@ def view_walk(context, request):
     return a list of files delimited by \n as response body
     """
     return Response("\n".join([traversal.resource_path(child)
-                               for child in context]),
+                               for child in context 
+                               if not isinstance(child, FileContainer)]),
                     content_type="text/plain")
 
 
