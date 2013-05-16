@@ -18,6 +18,7 @@ from markdown import Markdown
 import os
 import logging
 import cStringIO
+import time
 log = logging.getLogger(__name__)
 
 md_extensions = ["meta", "codehilite"]
@@ -97,6 +98,9 @@ class BlogEntry(FileResource):
 
         for k, v in m.Meta.items():
             setattr(self, k, " ".join(v))
+
+        setattr(self, "published_date", time.ctime(getattr(self, "published_date")) or time.ctime(os.path.getctime(path)))
+        setattr(self, "template", getattr(self, "template") or request.registry.settings["blog_entry_template"])
         self.page = BlogPage(request, "%s.html" % self.base_name, self)
 
 
@@ -139,7 +143,8 @@ class BlogContainer(FileContainer):
             # assume parsed as blogentry
 
             entry = super(BlogContainer, self).__getitem__(key)
-            self._generated_files[entry.page.__name__] = entry.page # for __iter__
+            if isinstance(entry, BlogEntry):
+                self._generated_files[entry.page.__name__] = entry.page # for __iter__
             return entry
         except Exception as ex:
             if isinstance(ex, KeyError):
@@ -161,7 +166,7 @@ class BlogContainer(FileContainer):
     def __iter__(self):
         for item in super(BlogContainer, self).__iter__():
             yield item
-        for name, item in self._generated_files.items():
+        for item in self._generated_files.values():
             yield item
 
 
@@ -171,8 +176,9 @@ def view_index(context, request):
     list of blog entries as context for the template (sorted by published_date or file created_by)
     template_context = dict(context=context, request=request, entries=entries)
     """
+    print [e.path for e in context.__parent__]
     entries = (e for e in context.__parent__ if isinstance(e, BlogEntry))
-    sorted_entries = sorted(entries, key=lambda x: x.published_date)
+    sorted_entries = sorted(entries, key=lambda x: x.published_date, reverse=True)
     content = context.render_as_template(entries=sorted_entries)
     return Response(body=content)
 

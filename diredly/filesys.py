@@ -77,7 +77,7 @@ class FileResource(Templateable, FileSystemBase):
 
     def __init__(self, request, path, parent=None):
         super(FileResource, self).__init__(request, path, parent=parent)
-        assert os.path.isfile(self.path), "not a file"
+        assert os.path.isfile(self.path), "%s not a file" % self.path
 
 
 class FileContainer(FileSystemBase):
