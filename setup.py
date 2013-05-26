@@ -42,5 +42,7 @@ setup(name="diredly",
       install_requires=install_requires,
       entry_points="""
       # -*- Entry points: -*-
+      [console_scripts]
+      diredly_export=diredly.scripts.diredly_export:main
       """,
       )
