@@ -19,9 +19,25 @@ import os
 import logging
 import cStringIO
 import time
+import datetime
 log = logging.getLogger(__name__)
 
 md_extensions = ["meta", "codehilite"]
+
+DATE_FMTS = ["%Y-%m-%d %H:%M:%S",
+             "%Y-%m-%d"]
+
+def parse_date(value):
+    if not value:
+        return
+    for f in DATE_FMTS:
+        try:
+            result = time.strptime(value, f)
+            return time.mktime(result)
+        except ValueError:
+            pass
+    else:
+        raise ValueError("%s does not follow any of the supported formats %s" % (value, DATE_FMTS))
 
 
 class BlogPage(Templateable, FileSystemBase):
@@ -99,8 +115,12 @@ class BlogEntry(FileResource):
         for k, v in m.Meta.items():
             setattr(self, k, " ".join(v))
 
-        setattr(self, "published_date", time.ctime(getattr(self, "published_date")) or time.ctime(os.path.getctime(path)))
+        setattr(self, "published_date",
+                datetime.datetime.strptime(time.ctime(parse_date(getattr(self, "published_date"))) or \
+                                           time.ctime(os.path.getctime(path)),
+                                           "%a %b %d %H:%M:%S %Y"))
         setattr(self, "template", getattr(self, "template") or request.registry.settings["blog_entry_template"])
+        setattr(self, "author", getattr(self,"author") or request.registry.settings["blog_author"])
         self.page = BlogPage(request, "%s.html" % self.base_name, self)
 
 
@@ -176,7 +196,6 @@ def view_index(context, request):
     list of blog entries as context for the template (sorted by published_date or file created_by)
     template_context = dict(context=context, request=request, entries=entries)
     """
-    print [e.path for e in context.__parent__]
     entries = (e for e in context.__parent__ if isinstance(e, BlogEntry))
     sorted_entries = sorted(entries, key=lambda x: x.published_date, reverse=True)
     content = context.render_as_template(entries=sorted_entries)
